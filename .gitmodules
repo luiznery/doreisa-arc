@@ -1,0 +1,3 @@
+[submodule "doreisa"]
+	path = doreisa
+	url = https://github.com/AdrienVannson/doreisa.git
