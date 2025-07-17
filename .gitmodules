@@ -1,3 +1,12 @@
 [submodule "doreisa"]
 	path = doreisa
 	url = https://github.com/AdrienVannson/doreisa.git
+[submodule "lib/kokkos"]
+	path = lib/kokkos
+	url = https://github.com/kokkos/kokkos.git
+[submodule "lib/dms"]
+	path = lib/dms
+	url = https://github.com/Maison-de-la-Simulation/dms.git
+[submodule "simulation"]
+	path = simulation
+	url = https://github.com/Maison-de-la-Simulation/bench-in-situ.git
