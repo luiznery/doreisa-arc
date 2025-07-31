@@ -65,3 +65,10 @@
     add_subdirectory(${PROJECT_SOURCE_DIR}/../lib/inih ${CMAKE_BINARY_DIR}/lib/inih)
     add_subdirectory(${PROJECT_SOURCE_DIR}/src)
     ```
+8. Build the simulation running `bash build_simulation.sh` from a instance running the container:
+    ```
+    oarsub -I
+    singularity shell <path_to_sif_file>
+    bash build_simulation.sh
+    ```
+9. Run the experiments with exec_experiments.py, fist run `python exec_experiments.py -h` to check the arguments.
