@@ -7,9 +7,8 @@ import dask.array as da
 from doreisa.head_node import init
 from doreisa.window_api import ArrayDefinition, run_simulation
 
-print("[DOREISA] TEST!", flush=True)
 init()
-print("[DOREISA] DOREISA initialized.")
+print("[DOREISA] Analytics initialized.")
 
 result = []
 timings_graph = []

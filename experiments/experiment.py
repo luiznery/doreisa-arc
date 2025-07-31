@@ -1,6 +1,8 @@
 import execo_g5k
 import execo
 import configparser
+import math
+
 
 def get_configs(config_file):
     """ 
@@ -82,7 +84,7 @@ def start_ray_nodes(nodes: list, head_node_address: str, exp_name: str, DOREISA_
     )
     # ray_node_cmd = f"nc -zv {head_node_address} 4242 > {LOGS_PATH}ray_worker.log 2>&1"
     singularity_cmd = f'singularity exec {SIF_FILE} bash -c "{ray_node_cmd}" '
-    print(singularity_cmd)
+    # print(singularity_cmd)
     ray_nodes_processes = []
     for node in nodes:
         ray_node_process = execo.SshProcess(
@@ -160,3 +162,97 @@ def start_analytics(head_node: str, exp_name: str, DOREISA_PATH: str, ANALYTICS_
     analytics_process.start()
     print(f"[{exp_name}] Analytics started on {head_node}.")
     return analytics_process
+
+def produce_config_file_strong_scaling(output_dir: str, 
+                                       template_ini_file: str,
+                                       mpi_np: int, 
+                                       x: int, 
+                                       y: int, 
+                                       z: int, 
+                                       n_step_max: int):
+    nx = x
+    ny = y
+    nz = z
+
+    mx = 1
+    my = 1
+    mz = 1
+
+    log_n_mpi = math.log2(mpi_np)
+    if not log_n_mpi.is_integer():
+        raise ValueError("mpi_np must be a power of 2")
+    log_n_mpi = int(log_n_mpi)
+    
+    for i in range(log_n_mpi):
+        if i%2 == 0:
+            nx /= 2
+            mx *= 2
+        else:
+            ny /= 2
+            my *= 2
+
+    #write the simulation ini file in output_dir
+    simulation_ini_file = output_dir + f"{mpi_np}.ini"
+    T_END_VAR = 10
+    N_STEP_MAX_VAR=n_step_max
+    #read the template ini file
+    
+    with open(template_ini_file, "r") as f:
+        template_content = f.read()
+    #replace the variables in the template with the values
+    template_content = template_content.replace("<T_END_VAR>", str(int(T_END_VAR)))
+    template_content = template_content.replace("<N_STEP_MAX_VAR>", str(int(N_STEP_MAX_VAR)))
+    template_content = template_content.replace("<NX_VAR>", str(int(nx)))
+    template_content = template_content.replace("<NY_VAR>", str(int(ny)))
+    template_content = template_content.replace("<NZ_VAR>", str(int(nz)))
+    template_content = template_content.replace("<MX_VAR>", str(int(mx)))
+    template_content = template_content.replace("<MY_VAR>", str(int(my)))
+    template_content = template_content.replace("<MZ_VAR>", str(int(mz)))
+    with open(simulation_ini_file, "w") as f:
+        f.write(template_content)
+    
+    return simulation_ini_file
+
+
+def produce_config_files_weak_scaling(output_dir: str, 
+                                      template_ini_file: str,
+                                      mpi_np: int, 
+                                      nx: int, 
+                                      ny: int, 
+                                      nz: int, 
+                                      n_step_max: int):  
+    mx = 1
+    my = 1
+    mz = 1
+
+    log_n_mpi = math.log2(mpi_np)
+    if not log_n_mpi.is_integer():
+        raise ValueError("mpi_np must be a power of 2")
+    log_n_mpi = int(log_n_mpi)
+    
+    for i in range(log_n_mpi):
+        if i%2 == 0:
+            mx *= 2
+        else:
+            my *= 2
+
+    #write the simulation ini file in output_dir
+    simulation_ini_file = output_dir + f"{mpi_np}.ini"
+    T_END_VAR = 10
+    N_STEP_MAX_VAR=n_step_max
+    #read the template ini file
+    with open(template_ini_file, "r") as f:
+        template_content = f.read()
+    #replace the variables in the template with the values
+    template_content = template_content.replace("<T_END_VAR>", str(int(T_END_VAR)))
+    template_content = template_content.replace("<N_STEP_MAX_VAR>", str(int(N_STEP_MAX_VAR)))
+    template_content = template_content.replace("<NX_VAR>", str(int(nx)))
+    template_content = template_content.replace("<NY_VAR>", str(int(ny)))
+    template_content = template_content.replace("<NZ_VAR>", str(int(nz)))
+    template_content = template_content.replace("<MX_VAR>", str(int(mx)))
+    template_content = template_content.replace("<MY_VAR>", str(int(my)))
+    template_content = template_content.replace("<MZ_VAR>", str(int(mz)))
+    with open(simulation_ini_file, "w") as f:
+        f.write(template_content)
+    
+    return simulation_ini_file

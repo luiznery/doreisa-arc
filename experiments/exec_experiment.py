@@ -16,23 +16,81 @@ parser.add_argument("--worker_nodes", '-w', type=int, default=1, help=(
 parser.add_argument("--walltime_in_mins", '-t', type=int, default=5, help=(
     "Walltime in minutes for the experiment. Default is 5 minutes. "
 ))
+parser.add_argument("--n_step_max", '-s', type=int, default=100, help=(
+    "Maximum number of steps for the simulation. Default is 500."
+))
+parser.add_argument("--strong_xyz", '-sxyz', type=int, nargs=3, default=None, help=(
+    "Total grid size for strong scaling (x, y, z). Default is (32, 32, 32)."
+))
+parser.add_argument("--weak_xyz", '-wxyz', type=int, nargs=3, default=None, help=(
+    "Grid size per MPI process for weak scaling (x, y, z). Default is (32, 32, 32)."
+))
+parser.add_argument("--mpi_np", '-np', type=int, default=1, help=(
+    "Number of MPI processes to use. Default is 1."
+))
 args = parser.parse_args()
 
+if args.n_step_max < 1:
+    raise ValueError("n_step_max must be at least 1.")
+
+if args.mpi_np < 1:
+    raise ValueError("mpi_np must be at least 1.")
+
+if args.worker_nodes < 1:
+    raise ValueError("worker_nodes must be at least 1.")
 number_of_nodes = args.worker_nodes + 1  # +1 for the head node
+
+if args.walltime_in_mins < 1:
+    raise ValueError("walltime_in_mins must be at least 1.")
 walltime_in_secs = args.walltime_in_mins * 60  # Convert minutes to seconds
-exp_name = f"{int(time.time())}_{args.exp_name}_{number_of_nodes}"
+
+
+if args.strong_xyz and args.weak_xyz:
+    raise ValueError("You can only specify either strong_xyz or weak_xyz, not both.")
+if not (args.strong_xyz or args.weak_xyz):
+    raise ValueError("You must specify either strong_xyz or weak_xyz.")
+if args.strong_xyz:
+    x, y, z = args.strong_xyz
+    exp_type = "strong"
+else:
+    x, y, z = args.weak_xyz
+    exp_type = "weak"
+
+exp_name = f"{int(time.time())}_{args.exp_name}_{exp_type}_{x}_{y}_{z}_{args.mpi_np}_{args.worker_nodes}_{args.n_step_max}"
 
 REPO_PATH = "/home/lmascare/doreisa-arc/"
 LOGS_PATH = f"{REPO_PATH}logs/"+exp_name+"/"
-SIMULATION_INI_FILE = f"{REPO_PATH}simulation/setup.ini"
 SIMULATION_YAML_FILE = f"{REPO_PATH}simulation/io_chkpt.yml"
 SIF_FILE = f"{REPO_PATH}docker/images/simulation.sif"
 DOREISA_PATH = f"{REPO_PATH}doreisa"
 SIMULATION_EXECUTABLE = f"{REPO_PATH}simulation/build/main"
 ANALYTICS_FILE = f"{REPO_PATH}analytics/doreisa-avg.py"
+TEMPLATE_INI_FILE = f"{REPO_PATH}experiments/templates/template.ini"
 
 os.mkdir(LOGS_PATH)
 print(f"[{exp_name}] Created logs directory: {LOGS_PATH}")
+
+if exp_type == "strong":
+    SIMULATION_INI_FILE = produce_config_file_strong_scaling(
+        output_dir=LOGS_PATH,
+        template_ini_file=TEMPLATE_INI_FILE,
+        mpi_np=args.mpi_np,
+        x=x,
+        y=y,
+        z=z,
+        n_step_max=args.n_step_max
+    )
+else:
+    SIMULATION_INI_FILE = produce_config_file_strong_scaling(
+        output_dir=LOGS_PATH,
+        template_ini_file=TEMPLATE_INI_FILE,
+        mpi_np=args.mpi_np,
+        nx=x,
+        ny=y,
+        nz=z,
+        n_step_max=args.n_step_max
+    )
+print(f"[{exp_name}] Created simulation ini file: {SIMULATION_INI_FILE}")
 
 jobs = alloc_nodes(number_of_nodes, walltime_in_secs)
 job_id, site = jobs[0]
